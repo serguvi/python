@@ -440,5 +440,83 @@ class TestSla(unittest.TestCase):
         assert sla == 98.0
 
 
+class TestPeriodicSla(unittest.TestCase):
+
+    def test_sla1(self):
+        sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "quarter")
+        sla_object.values = [[1664659805.189, '100'],
+                             [1664746204.522, '100'], [1664832605.724, '100'], [1664919005.918, '100'],
+                             [1665005404.591, '100'], [1665091804.309, '100'], [1665178204.686, '100'],
+                             [1665264605.1, '100'], [1665351007.926, '100'], [1665437404.439, '100'],
+                             [1665523804.774, '100'], [1665610204.454, '100'], [1665696603.934, '100']]
+        sla = sla_object.get_sla()
+        assert sla == 100.0
+
+    def test_sla2(self):
+        sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "quarter")
+        sla_object.values = [[1664659805.189, '87'], [1664670805.189, '87'], [1664680805.189, '87'],
+                             [1664746204.522, '100'], [1664832605.724, '100'], [1664919005.918, '100'],
+                             [1665005404.591, '100'], [1665091804.309, '100'], [1665178204.686, '100'],
+                             [1665264605.1, '100'], [1665351007.926, '100'], [1665437404.439, '100'],
+                             [1665523804.774, '100'], [1665610204.454, '100'], [1665696603.934, '100']]
+        downtime_percentage = sla_object.get_downtime_percentage()
+        sla = sla_object.get_sla()
+        assert downtime_percentage == 1.0
+        assert sla == 100.0
+
+    def test_sla3(self):
+        sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "month")
+        sla_object.values = [[1664659805.189, '87'],
+                             [1664746204.522, '100'], [1664832605.724, '100'], [1664919005.918, '100'],
+                             [1665005404.591, '100'], [1665091804.309, '100'], [1665178204.686, '100'],
+                             [1665264605.1, '100'], [1665351007.926, '100'], [1665437404.439, '100'],
+                             [1665523804.774, '100'], [1665610204.454, '100'], [1665696603.934, '100']]
+        downtime_percentage = sla_object.get_downtime_percentage()
+        sla = sla_object.get_sla()
+        assert downtime_percentage == 1.0
+        assert sla == 100.0
+
+    def test_sla4(self):
+        sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "quarter")
+        sla_object.values = [[1664659805.189, '86'],
+                             [1664746204.522, '100'], [1664832605.724, '100'], [1664919005.918, '100'],
+                             [1665005404.591, '100'], [1665091804.309, '100'], [1665178204.686, '100'],
+                             [1665264605.1, '100'], [1665351007.926, '100'], [1665437404.439, '100'],
+                             [1665523804.774, '100'], [1665610204.454, '100'], [1665696603.934, '100']]
+        downtime_percentage = sla_object.get_downtime_percentage()
+        sla = sla_object.get_sla()
+        assert downtime_percentage == 1.08
+        assert sla == 98.92
+
+    def test(self):
+        try:
+            print("Рассчитываем месячный SLA")
+            month_sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "month")
+            print(f"Полученный JSON Из Виктории для : {month_sla_object.json}")
+            month_sla = month_sla_object.get_sla()
+            print(f"SLA Отказоустойчивость OMi GW за текущий месяц: {month_sla}%. "
+                  f"Процент простоя за текущий месяц: {month_sla_object.get_downtime_percentage()}")
+            cmd = "curl -d \"%s{calculation=\\\"%s\\\"} %.2f\" " \
+                  "-X POST \"http://.../insert/3/prometheus/api/v1/import/prometheus\"" \
+                  % ("SLA_OMI_performance", "month", month_sla)
+            print(cmd)
+        except Exception as e:
+            print(e)
+
+        try:
+            print("\nРассчитываем квартальный SLA")
+            quarter_sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "quarter")
+            print(f"Полученный JSON Из Виктории для : {quarter_sla_object.json}")
+            quarter_sla = quarter_sla_object.get_sla()
+            print(f"SLA Отказоустойчивость OMi GW за текущий квартал: {quarter_sla}%. "
+                  f"Процент простоя за текущий квартал: {quarter_sla_object.get_downtime_percentage()}")
+            cmd = "curl -d \"%s{calculation=\\\"%s\\\"} %.2f\" " \
+                  "-X POST \"http://.../insert/3/prometheus/api/v1/import/prometheus\"" \
+                  % ("SLA_OMI_performance", "quarter", quarter_sla)
+            print(cmd)
+        except Exception as e:
+            print(e)
+
+
 if __name__ == "__main__":
     unittest.main()

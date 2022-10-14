@@ -1,8 +1,11 @@
+import datetime
 import logging
 import os
 import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+
+import requests
 
 
 def get_script_location() -> Path:
@@ -44,8 +47,18 @@ def get_logger(filename: str, logs_path: Path) -> logging.Logger:
     return logger
 
 
-def send_to_victoria(metric_name, metric_value) -> int:
-    cmd = "curl -d \"%s{calculation=\\\"past_days\\\"} %i\" -X POST \"http://............./insert/3/prometheus/api/v1/import/prometheus\"" % (metric_name, metric_value)
+def send_to_victoria(metric_name, metric_value, calculation="past_days") -> int:
+    """
+    Отправляет метрику в викторию с помозщью curl'a
+
+    :param metric_name: Имя метрики
+    :param metric_value: Значение метрики
+    :param calculation: Опционально период расчёта
+    :return: Логгер
+    """
+    cmd = "curl -d \"%s{calculation=\\\"%s\\\"} %.2f\" " \
+          "-X POST \"http://.../insert/3/prometheus/api/v1/import/prometheus\"" \
+          % (metric_name, calculation, metric_value)
     return os.system(cmd)
 
 
@@ -166,3 +179,115 @@ class Sla:
         :return: SLA в процентах
         """
         return round(((1440 - self.downtime) / 1440) * 100, 3)
+
+
+class PeriodicSla:
+    date_now = datetime.datetime.now()
+
+    def __init__(self, victoria_request: str, period: str):
+        """
+        Создаёт объект класса, выполняет запрос на получение данных по сла из виктории
+
+        :param victoria_request: запрос в викторию по которому можно получить даныые по SLA
+        :param period: период расчёта SLA (quarter или month)
+        """
+        self.victoria_request = victoria_request
+        self._set_target_days(period)
+        self._set_data()
+        self.downtime_percentage = None
+        self.sla = None
+
+    def _set_target_days(self, period: str) -> None:
+        """
+        Вычисляет кол-во дней за которые необходимо получить данные из виктории, зависит от полученного периода
+
+        :param period: период расчёта SLA (quarter или month)
+        :return: None
+        """
+
+        first_quarter_start = datetime.datetime(self.date_now.year, 1, 1)
+        second_quarter_start = datetime.datetime(self.date_now.year, 4, 1)
+        third_quarter_start = datetime.datetime(self.date_now.year, 7, 1)
+        fourth_quarter_start = datetime.datetime(self.date_now.year, 10, 1)
+
+        first_day_month = datetime.datetime(self.date_now.year, self.date_now.month, 1)
+
+        if period == "quarter":
+            if self.date_now > fourth_quarter_start:
+                self.target_days = (self.date_now - fourth_quarter_start).days
+            elif self.date_now > third_quarter_start:
+                self.target_days = (self.date_now - third_quarter_start).days
+            elif self.date_now > second_quarter_start:
+                self.target_days = (self.date_now - second_quarter_start).days
+            else:
+                self.target_days = (self.date_now - first_quarter_start).days
+        else:
+            self.target_days = (self.date_now - first_day_month).days
+
+    def _set_data(self) -> None:
+        """
+        Выполняет запрос в викторию, сохраняет полученный json и значения искомого SLA за необходимый период
+
+        :return: None
+        """
+        request_url = f"http://.../select/3/prometheus/api/v1/query?" \
+                      f"query={self.victoria_request}[{self.target_days}d]"
+        self.response = requests.get(request_url)
+        if self.response.status_code != 200:
+            raise ValueError(f"Ошибка получения данных их Виктории для запроса '{request_url}'. "
+                             f"Response: {self.response.text}.")
+        self.json = self.response.json()
+        self.data = self.json.get("data", {})
+        self.values = self.data.get("result", [{}])[0].get("values", None)
+        if self.values is None:
+            raise ValueError("Нет данных для расчёта в полученном json из виктории.")
+
+    def calculate_downtime_percentage(self) -> None:
+        """
+        Рассчитывает и сохраняет процент простоя за необходимый период
+
+        :return: None
+        """
+        total_value = 0
+        last_timestamp = 0
+        count_values = 0
+        for timestamp, value in self.values:
+            if timestamp - last_timestamp > 80000:  # текущий timestamp value должен быть старше предыдущего +- на сутки
+                total_value += float(value)
+                last_timestamp = timestamp
+                count_values += 1
+        self.downtime_percentage = (count_values * 100 - total_value) / (count_values * 100) * 100
+
+    def get_downtime_percentage(self) -> float:
+        """
+        Возвращает процент простоя за необходимый период
+
+        :return: Процент простоя за необходимый период
+        """
+        if self.downtime_percentage is None:
+            self.calculate_downtime_percentage()
+        return round(self.downtime_percentage, 2)
+
+    def calculate_sla(self) -> None:
+        """
+        Рассчитывает и сохраняет SLA за необходимый период
+
+        :return: None
+        """
+        if self.downtime_percentage is None:
+            self.calculate_downtime_percentage()
+
+        if self.downtime_percentage <= 1:
+            self.sla = 100.0
+        else:
+            self.sla = 100.0 - self.downtime_percentage
+
+    def get_sla(self) -> float:
+        """
+        Возвращает SLA за необходимый период
+
+        :return: SLA за необходимый период
+        """
+        if self.sla is None:
+            self.calculate_sla()
+        return round(self.sla, 2)
