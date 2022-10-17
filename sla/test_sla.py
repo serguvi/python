@@ -517,6 +517,86 @@ class TestPeriodicSla(unittest.TestCase):
         except Exception as e:
             print(e)
 
+    def test_calculate_period(self):
+        logs_path = Path("logs")
+        log = get_logger("test", logs_path)
+        log.info("\n========START========")
+        calculate_period_sla("SLA Работоспособность OMI", "SLA_OMI_performance", "month", log, True)
+        log.info("===================")
+        calculate_period_sla("SLA Работоспособность OMI", "SLA_OMI_performance", "quarter", log, True)
+        log.info("===================")
+        calculate_period_sla("SLA Отказоустойчивость OMi GW", "SLA_Fault_tolerance_OMi_GW", "month", log, True)
+        log.info("===================")
+        calculate_period_sla("SLA Отказоустойчивость OMi GW", "SLA_Fault_tolerance_OMi_GW", "quarter", log, True)
+        log.info("========END========\n")
+
+    def test_calculate_period_slo(self):
+        logs_path = Path("logs")
+        log = get_logger("test", logs_path)
+        log.info("\n========START========")
+        calculate_period_sla("SLO Доступности консоли (через балансировочный URL)",
+                             "SLO_Availability_Omi_test_0600balance", "month", log, True)
+        log.info("===================")
+        calculate_period_sla("SLO Доступности консоли (через балансировочный URL)",
+                             "SLO_Availability_Omi_test_0600balance", "quarter", log, True)
+        log.info("===================")
+        calculate_period_sla("SLO Работоспособность обработки событий", "SLO_Event_monitoring_OMI_DB",
+                             "month", log, True)
+        log.info("===================")
+        calculate_period_sla("SLO Работоспособность обработки событий", "SLO_Event_monitoring_OMI_DB",
+                             "quarter", log, True)
+        log.info("===================")
+        log.info("===================")
+        calculate_period_sla("SLO Доступность GW1",
+                             "SLO_Omi_test_GW1", "month", log, True)
+        log.info("===================")
+        calculate_period_sla("SLO Доступность GW1",
+                             "SLO_Omi_test_GW1", "quarter", log, True)
+        log.info("===================")
+        calculate_period_sla("SLO Доступность GW2", "SLO_Omi_test_GW2",
+                             "month", log, True)
+        log.info("===================")
+        calculate_period_sla("SLO Доступность GW2", "SLO_Omi_test_GW2",
+                             "quarter", log, True)
+        log.info("========END========\n")
+
+    def test_downtime(self):
+        PeriodicSla.date_now = datetime.datetime(2022, 10, 14)
+        sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "quarter")
+        sla_object.values = [[1664659805.189, '86'],
+                             [1664746204.522, '100'], [1664832605.724, '100'], [1664919005.918, '100'],
+                             [1665005404.591, '100'], [1665091804.309, '100'], [1665178204.686, '100'],
+                             [1665264605.1, '100'], [1665351007.926, '100'], [1665437404.439, '100'],
+                             [1665523804.774, '100'], [1665610204.454, '100'], [1665696603.934, '100']]
+        downtime_percentage = sla_object.get_downtime_percentage()
+        sla = sla_object.get_sla()
+        # downtime = sla_object.get_downtime()
+        # allowable_downtime = sla_object.get_allowable_downtime()
+        remaining_allowable_downtime = sla_object.get_remaining_allowable_downtime()
+        assert remaining_allowable_downtime == 1123.2
+        assert downtime_percentage == 1.08
+        assert sla == 98.92
+
+    def test_downtime2(self):
+        PeriodicSla.date_now = datetime.datetime(2022, 10, 14)
+        sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "month")
+        sla_object.values = [[1664659805.189, '87'],
+                             [1664746204.522, '100'], [1664832605.724, '100'], [1664919005.918, '100'],
+                             [1665005404.591, '100'], [1665091804.309, '100'], [1665178204.686, '100'],
+                             [1665264605.1, '100'], [1665351007.926, '100'], [1665437404.439, '100'],
+                             [1665523804.774, '100'], [1665610204.454, '100'], [1665696603.934, '100']]
+        downtime_percentage = sla_object.get_downtime_percentage()
+        sla = sla_object.get_sla()
+        downtime = sla_object.get_downtime()
+        allowable_downtime = sla_object.get_allowable_downtime()
+        remaining_allowable_downtime = sla_object.get_remaining_allowable_downtime()
+        remaining_allowable_downtime_percentage = sla_object.get_remaining_allowable_downtime_percentage()
+        # print(downtime, allowable_downtime, remaining_allowable_downtime, remaining_allowable_downtime_percentage)
+        assert remaining_allowable_downtime == 259.2
+        assert remaining_allowable_downtime_percentage == 58.06
+        assert downtime_percentage == 1
+        assert sla == 100
+
 
 if __name__ == "__main__":
     unittest.main()

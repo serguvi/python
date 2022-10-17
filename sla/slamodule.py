@@ -2,6 +2,7 @@ import datetime
 import logging
 import os
 import sys
+from calendar import monthrange
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -47,25 +48,82 @@ def get_logger(filename: str, logs_path: Path) -> logging.Logger:
     return logger
 
 
-def send_to_victoria(metric_name, metric_value, calculation="past_days") -> int:
+def send_to_victoria(metric_name: str, metric_value: str, calculation: str = "past_days", test: bool = False) -> int:
     """
     Отправляет метрику в викторию с помозщью curl'a
 
     :param metric_name: Имя метрики
     :param metric_value: Значение метрики
-    :param calculation: Опционально период расчёта
-    :return: Логгер
+    :param calculation: Опционально, период расчёта
+    :param test: Опционально, тест или нет
+    :return: результат выполнения команды в cmd
     """
     cmd = "curl -d \"%s{calculation=\\\"%s\\\"} %.2f\" " \
           "-X POST \"http://.../insert/3/prometheus/api/v1/import/prometheus\"" \
           % (metric_name, calculation, metric_value)
-    return os.system(cmd)
+    if not test:
+        return os.system(cmd)
+    else:
+        print(cmd)
+        return 0
+
+
+def calculate_period_sla(metric_name_rus: str, metric_name: str, period: str, log: logging.Logger,
+                         test: bool = False) -> None:
+    """
+    Рассчитывает и отправляет в викторию занчение SLA за указанные период в динамике
+
+    :param metric_name_rus: Имя метрики для записи в лог
+    :param metric_name: Имя метрики для отправки в викторию
+    :param period: Период за который необходим расчёт (month или quarter)
+    :param log: Логгер
+    :param test: Опционально, тест или нет
+    :return: None
+    """
+    if period == "quarter":
+        rus_period = "квартал"
+    elif period == "month":
+        rus_period = "месяц"
+    else:
+        log.error(f"Невозможно рассчитать за период, так как не правильно указан период. Period: {period}")
+        return
+
+    try:
+        log.info(f"Рассчитываем {metric_name_rus} за текущий {rus_period}")
+        sla_object = PeriodicSla("%s{calculation=\"past_days\"}" % metric_name, period)
+        log.info(f"Полученный JSON Из Виктории: {sla_object.json}")
+        sla = sla_object.get_sla()
+        downtime = sla_object.get_downtime()
+        downtime_percentage = sla_object.get_downtime_percentage()
+        remaining_allowable_downtime = sla_object.get_remaining_allowable_downtime()
+        remaining_allowable_downtime_percentage = sla_object.get_remaining_allowable_downtime_percentage()
+        log.info(f"{metric_name_rus} за текущий {rus_period}: {sla}%. \n"
+                 f"\tПроцент простоя за текущий {rus_period}: {downtime_percentage}. \n"
+                 f"\tВремя простоя за текущий {rus_period}: {downtime}. \n"
+                 f"\tОставшееся допустимое время простоя за текущий {rus_period}: {remaining_allowable_downtime}. \n"
+                 f"\tОставшееся допустимое время простоя в % за текущий {rus_period}: "
+                 f"{remaining_allowable_downtime_percentage}.")
+        log.info("Отправляем метрику в Victoria.")
+        cmd_code_exit = send_to_victoria(metric_name, sla, period, test)
+        log.info('Результат отправки в Victoria: ' + str(cmd_code_exit))
+        log.info("Отправляем оставшееся допустимое время простоя в Victoria.")
+        cmd_code_exit = send_to_victoria(metric_name + "_remaining_allowable_downtime",
+                                         remaining_allowable_downtime, period, test)
+        log.info('Результат отправки в Victoria: ' + str(cmd_code_exit))
+        log.info("Отправляем оставшееся допустимое время простоя (%) в Victoria.")
+        cmd_code_exit = send_to_victoria(metric_name + "_remaining_allowable_downtime_percentage",
+                                         remaining_allowable_downtime_percentage, period, test)
+        log.info('Результат отправки в Victoria: ' + str(cmd_code_exit))
+
+    except Exception as e:
+        log.error(e, exc_info=True)
 
 
 class Slo:
     """
     Класс для работы с SLO
     """
+
     def __init__(self, json_object, error_value: str):
         """
         Конструктор, инициализирующий необходимые атрибуты
@@ -128,6 +186,7 @@ class Sla:
     """
     Класс для работы с SLA включающим два SLO по условию нормы SLO1 && SLO2
     """
+
     def __init__(self, slo1: Slo, slo2: Slo):
         """
         Конструктор, инициализирующий необходимые атрибуты и рассчитывающий SLA для двух SLO
@@ -183,6 +242,15 @@ class Sla:
 
 class PeriodicSla:
     date_now = datetime.datetime.now()
+    minutes_in_day = 1440
+    days_in_current_month = monthrange(date_now.year, date_now.month)[1]
+
+    allowable_downtime_percentage = 1.0
+
+    first_quarter_start = datetime.datetime(date_now.year, 1, 1)
+    second_quarter_start = datetime.datetime(date_now.year, 4, 1)
+    third_quarter_start = datetime.datetime(date_now.year, 7, 1)
+    fourth_quarter_start = datetime.datetime(date_now.year, 10, 1)
 
     def __init__(self, victoria_request: str, period: str):
         """
@@ -192,35 +260,40 @@ class PeriodicSla:
         :param period: период расчёта SLA (quarter или month)
         """
         self.victoria_request = victoria_request
-        self._set_target_days(period)
-        self._set_data()
+        self.period = period
+        self._settlement_days = 0
+        self.downtime = None
         self.downtime_percentage = None
+        self.allowable_downtime = None
+        self.remaining_allowable_downtime = None
+        self.remaining_allowable_downtime_percentage = None
         self.sla = None
+        self.quarter = None
+        self._set_target_days()
+        self._set_data()
 
-    def _set_target_days(self, period: str) -> None:
+    def _set_target_days(self) -> None:
         """
         Вычисляет кол-во дней за которые необходимо получить данные из виктории, зависит от полученного периода
 
-        :param period: период расчёта SLA (quarter или month)
         :return: None
         """
 
-        first_quarter_start = datetime.datetime(self.date_now.year, 1, 1)
-        second_quarter_start = datetime.datetime(self.date_now.year, 4, 1)
-        third_quarter_start = datetime.datetime(self.date_now.year, 7, 1)
-        fourth_quarter_start = datetime.datetime(self.date_now.year, 10, 1)
-
         first_day_month = datetime.datetime(self.date_now.year, self.date_now.month, 1)
 
-        if period == "quarter":
-            if self.date_now > fourth_quarter_start:
-                self.target_days = (self.date_now - fourth_quarter_start).days
-            elif self.date_now > third_quarter_start:
-                self.target_days = (self.date_now - third_quarter_start).days
-            elif self.date_now > second_quarter_start:
-                self.target_days = (self.date_now - second_quarter_start).days
+        if self.period == "quarter":
+            if self.date_now > self.fourth_quarter_start:
+                self.target_days = (self.date_now - self.fourth_quarter_start).days
+                self.quarter = 4
+            elif self.date_now > self.third_quarter_start:
+                self.target_days = (self.date_now - self.third_quarter_start).days
+                self.quarter = 3
+            elif self.date_now > self.second_quarter_start:
+                self.target_days = (self.date_now - self.second_quarter_start).days
+                self.quarter = 2
             else:
-                self.target_days = (self.date_now - first_quarter_start).days
+                self.target_days = (self.date_now - self.first_quarter_start).days
+                self.quarter = 1
         else:
             self.target_days = (self.date_now - first_day_month).days
 
@@ -238,9 +311,13 @@ class PeriodicSla:
                              f"Response: {self.response.text}.")
         self.json = self.response.json()
         self.data = self.json.get("data", {})
-        self.values = self.data.get("result", [{}])[0].get("values", None)
+        self.data_result = self.data.get("result", [{}])
+        if len(self.data_result) == 0:
+            self.values = None
+        else:
+            self.values = self.data_result[0].get("values", None)
         if self.values is None:
-            raise ValueError("Нет данных для расчёта в полученном json из виктории.")
+            raise ValueError(f"Нет данных для расчёта в полученном json из виктории. JSON: {self.json}")
 
     def calculate_downtime_percentage(self) -> None:
         """
@@ -277,7 +354,7 @@ class PeriodicSla:
         if self.downtime_percentage is None:
             self.calculate_downtime_percentage()
 
-        if self.downtime_percentage <= 1:
+        if self.downtime_percentage <= self.allowable_downtime_percentage:
             self.sla = 100.0
         else:
             self.sla = 100.0 - self.downtime_percentage
@@ -291,3 +368,95 @@ class PeriodicSla:
         if self.sla is None:
             self.calculate_sla()
         return round(self.sla, 2)
+
+    def calculate_downtime(self) -> None:
+        """
+        Рассчитывает текущее время простоя за необходимый период
+
+        :return: None
+        """
+        if self.downtime_percentage is None:
+            self.calculate_downtime_percentage()
+
+        self.downtime = self.target_days * PeriodicSla.minutes_in_day * (self.downtime_percentage / 100)
+
+    def get_downtime(self) -> float:
+        """
+        Возвращает текущее время простоя за необходимый период
+
+        :return: Текущее время простоя за необходимый период
+        """
+        if self.downtime is None:
+            self.calculate_downtime()
+
+        return round(self.downtime, 2)
+
+    def calculate_allowable_downtime(self) -> None:
+        """
+        Рассчитывает допустимое время простоя за необходимый период
+
+        :return: None
+        """
+        if self.period == "month":
+            days_amount = self.days_in_current_month
+        else:
+            if self.quarter == 4:
+                days_amount = (datetime.datetime(self.date_now.year + 1, 1, 1) - self.fourth_quarter_start).days
+            elif self.quarter == 3:
+                days_amount = (self.fourth_quarter_start - self.third_quarter_start).days
+            elif self.quarter == 2:
+                days_amount = (self.third_quarter_start - self.second_quarter_start).days
+            else:
+                days_amount = (self.second_quarter_start - self.first_quarter_start).days
+        minutes_amount = days_amount * self.minutes_in_day
+        self.allowable_downtime = minutes_amount * 0.01
+
+    def get_allowable_downtime(self) -> float:
+        """
+        Возвращает допустимое время простоя за необходимый период
+
+        :return: Допустимое время простоя за необходимый период
+        """
+        if self.allowable_downtime is None:
+            self.calculate_allowable_downtime()
+        return round(self.allowable_downtime, 2)
+
+    def calculate_remaining_allowable_downtime(self) -> None:
+        """
+        Рассчитывает оставшееся допустимое время простоя за необходимый период
+
+        :return: None
+        """
+        downtime = self.get_downtime()
+        allowable_downtime = self.get_allowable_downtime()
+        self.remaining_allowable_downtime = allowable_downtime - downtime
+
+    def get_remaining_allowable_downtime(self) -> float:
+        """
+        Возвращает оставшееся допустимое время простоя за необходимый период
+
+        :return: Оставшееся допустимое время простоя за необходимый период
+        """
+        if self.remaining_allowable_downtime is None:
+            self.calculate_remaining_allowable_downtime()
+        return round(self.remaining_allowable_downtime, 2)
+
+    def calculate_remaining_allowable_downtime_percentage(self) -> None:
+        """
+        Рассчитывает оставшееся допустимое время простоя в % за необходимый период
+
+        :return: None
+        """
+        downtime = self.get_downtime()
+        allowable_downtime = self.get_allowable_downtime()
+        self.remaining_allowable_downtime_percentage = 100 - (downtime / (allowable_downtime / 100))
+
+    def get_remaining_allowable_downtime_percentage(self):
+        """
+        Возвращает оставшееся допустимое время простоя в % за необходимый период
+
+        :return: Оставшееся допустимое время простоя в % за необходимый период
+        """
+        if self.remaining_allowable_downtime_percentage is None:
+            self.calculate_remaining_allowable_downtime_percentage()
+        return round(self.remaining_allowable_downtime_percentage, 2)

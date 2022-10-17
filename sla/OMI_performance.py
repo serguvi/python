@@ -43,6 +43,10 @@ def main():
             log.info(f"SLO Доступности консоли: {slo1}%. Downtime: {round(downtime1, 3)} мин")
             cmd_code_exit = send_to_victoria("SLO_Availability_Omi_test_0600balance", slo1)
             log.info('Результат отправки в Victoria: ' + str(cmd_code_exit))
+            calculate_period_sla("SLO Доступности консоли (через балансировочный URL)",
+                                 "SLO_Availability_Omi_test_0600balance", "month", log)
+            calculate_period_sla("SLO Доступности консоли (через балансировочный URL)",
+                                 "SLO_Availability_Omi_test_0600balance", "quarter", log)
         else:
             log.error(f"Ошибка получения данных их Виктории для 'Omi_test_0600balance'. Response:"
                       f" {response_SLO_Omi_test_0600balance.text}.")
@@ -56,6 +60,10 @@ def main():
             log.info(f"SLO Работоспособность обработки событий: {slo2}%. Downtime: {round(downtime2, 3)} мин")
             cmd_code_exit = send_to_victoria("SLO_Event_monitoring_OMI_DB", slo2)
             log.info('Результат отправки в Victoria: ' + str(cmd_code_exit))
+            calculate_period_sla("SLO Работоспособность обработки событий", "SLO_Event_monitoring_OMI_DB",
+                                 "month", log)
+            calculate_period_sla("SLO Работоспособность обработки событий", "SLO_Event_monitoring_OMI_DB",
+                                 "quarter", log)
         else:
             log.error(f"Ошибка получения данных их Виктории для 'Мониторинг поступления событий в БД OMI'. Response:"
                       f" {response_SLO_event_handling_health.text}.")
@@ -72,30 +80,8 @@ def main():
     else:
         log.error(f"Невозможно рассчитать SLA, так как не рассчитаны все SLO.")
 
-    try:
-        log.info("Рассчитываем месячный SLA")
-        month_sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "month")
-        log.info(f"Полученный JSON Из Виктории: {month_sla_object.json}")
-        month_sla = month_sla_object.get_sla()
-        log.info(f"SLA Работоспособность OMI за текущий месяц: {month_sla}%. "
-                 f"Процент простоя за текущий месяц: {month_sla_object.get_downtime_percentage()}")
-        cmd_code_exit = send_to_victoria("SLA_OMI_performance", month_sla, "month")
-        log.info('Результат отправки в Victoria: ' + str(cmd_code_exit))
-    except Exception as e:
-        log.error(e, exc_info=True)
-
-    try:
-        log.info("Рассчитываем квартальный SLA")
-        quarter_sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "quarter")
-        log.info(f"Полученный JSON Из Виктории: {quarter_sla_object.json}")
-        quarter_sla = quarter_sla_object.get_sla()
-        log.info(f"SLA Работоспособность OMI за текущий квартал: {quarter_sla}%. "
-                 f"Процент простоя за текущий квартал: {quarter_sla_object.get_downtime_percentage()}")
-        cmd_code_exit = send_to_victoria("SLA_OMI_performance", quarter_sla, "quarter")
-        log.info('Результат отправки в Victoria: ' + str(cmd_code_exit))
-
-    except Exception as e:
-        log.error(e, exc_info=True)
+    calculate_period_sla("SLA Работоспособность OMI", "SLA_OMI_performance", "month", log)
+    calculate_period_sla("SLA Работоспособность OMI", "SLA_OMI_performance", "quarter", log)
 
     log.info("========END========")
 

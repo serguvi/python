@@ -40,6 +40,10 @@ def main():
             log.info(f"SLO Доступность GW1: {slo1}%. Downtime: {round(downtime1, 3)} мин")
             cmd_code_exit = send_to_victoria("SLO_Omi_test_GW1", slo1)
             log.info('Результат отправки в Victoria: ' + str(cmd_code_exit))
+            calculate_period_sla("SLO Доступность GW1",
+                                 "SLO_Omi_test_GW1", "month", log)
+            calculate_period_sla("SLO Доступность GW1",
+                                 "SLO_Omi_test_GW1", "quarter", log)
         else:
             log.error(f"Ошибка получения данных их Виктории для 'Omi_test_GW1'. Response:"
                       f" {response_SLO_Omi_test_GW1.text}.")
@@ -53,6 +57,10 @@ def main():
             log.info(f"SLO Доступность GW2: {slo2}%. Downtime: {round(downtime2, 3)} мин")
             cmd_code_exit = send_to_victoria("SLO_Omi_test_GW2", slo2)
             log.info('Результат отправки в Victoria: ' + str(cmd_code_exit))
+            calculate_period_sla("SLO Доступность GW2", "SLO_Omi_test_GW2",
+                                 "month", log)
+            calculate_period_sla("SLO Доступность GW2", "SLO_Omi_test_GW2",
+                                 "quarter", log)
         else:
             log.error(f"Ошибка получения данных их Виктории для 'Omi_test_GW2'. Response:"
                       f" {response_SLO_Omi_test_GW2.text}.")
@@ -69,30 +77,8 @@ def main():
     else:
         log.error(f"Невозможно рассчитать SLA, так как не рассчитаны все SLO.")
 
-    try:
-        log.info("Рассчитываем месячный SLA")
-        month_sla_object = PeriodicSla("SLA_Fault_tolerance_OMi_GW{calculation=\"past_days\"}", "month")
-        log.info(f"Полученный JSON Из Виктории: {month_sla_object.json}")
-        month_sla = month_sla_object.get_sla()
-        log.info(f"SLA Отказоустойчивость OMi GW за текущий месяц: {month_sla}%. "
-                 f"Процент простоя за текущий месяц: {month_sla_object.get_downtime_percentage()}")
-        cmd_code_exit = send_to_victoria("SLA_Fault_tolerance_OMi_GW", month_sla, "month")
-        log.info('Результат отправки в Victoria: ' + str(cmd_code_exit))
-    except Exception as e:
-        log.error(e, exc_info=True)
-
-    try:
-        log.info("Рассчитываем квартальный SLA")
-        quarter_sla_object = PeriodicSla("SLA_Fault_tolerance_OMi_GW{calculation=\"past_days\"}", "quarter")
-        log.info(f"Полученный JSON Из Виктории: {quarter_sla_object.json}")
-        quarter_sla = quarter_sla_object.get_sla()
-        log.info(f"SLA Отказоустойчивость OMi GW за текущий квартал: {quarter_sla}%. "
-                 f"Процент простоя за текущий квартал: {quarter_sla_object.get_downtime_percentage()}")
-        cmd_code_exit = send_to_victoria("SLA_Fault_tolerance_OMi_GW", quarter_sla, "quarter")
-        log.info('Результат отправки в Victoria: ' + str(cmd_code_exit))
-
-    except Exception as e:
-        log.error(e, exc_info=True)
+    calculate_period_sla("SLA Отказоустойчивость OMi GW", "SLA_Fault_tolerance_OMi_GW", "month", log)
+    calculate_period_sla("SLA Отказоустойчивость OMi GW", "SLA_Fault_tolerance_OMi_GW", "quarter", log)
 
     log.info("========END========")
 
