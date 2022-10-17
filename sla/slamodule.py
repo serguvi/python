@@ -261,7 +261,6 @@ class PeriodicSla:
         """
         self.victoria_request = victoria_request
         self.period = period
-        self._settlement_days = 0
         self.downtime = None
         self.downtime_percentage = None
         self.allowable_downtime = None
@@ -409,7 +408,7 @@ class PeriodicSla:
             else:
                 days_amount = (self.second_quarter_start - self.first_quarter_start).days
         minutes_amount = days_amount * self.minutes_in_day
-        self.allowable_downtime = minutes_amount * 0.01
+        self.allowable_downtime = minutes_amount * (self.allowable_downtime_percentage / 100)
 
     def get_allowable_downtime(self) -> float:
         """
@@ -443,7 +442,7 @@ class PeriodicSla:
 
     def calculate_remaining_allowable_downtime_percentage(self) -> None:
         """
-        Рассчитывает оставшееся допустимое время простоя в % за необходимый период
+        Рассчитывает процент оставшегося допустимого времени простоя за необходимый период
 
         :return: None
         """
@@ -453,9 +452,9 @@ class PeriodicSla:
 
     def get_remaining_allowable_downtime_percentage(self):
         """
-        Возвращает оставшееся допустимое время простоя в % за необходимый период
+        Возвращает процент оставшегося допустимого времени простоя за необходимый период
 
-        :return: Оставшееся допустимое время простоя в % за необходимый период
+        :return: Процент оставшегося допустимого времени простоя за необходимый период
         """
         if self.remaining_allowable_downtime_percentage is None:
             self.calculate_remaining_allowable_downtime_percentage()
