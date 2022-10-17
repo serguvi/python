@@ -1,17 +1,17 @@
-import telebot
-import requests
-import vertica_python
-import time
-import re
 import base64
-import pika
-import json
 import copy
+import json
 from datetime import datetime, timedelta
+from io import BytesIO
 from threading import Thread
-from io import BytesIO, StringIO
+
+import pika
+import requests
+import telebot
+import vertica_python
 from PIL import Image
 from bs4 import BeautifulSoup
+
 from logger_assistant import *
 
 
@@ -91,7 +91,7 @@ def send_messages_to_chats():
                             chat_messages[chat_id].pop(message_list)
                             logger.info(f"Отправлено сообщение в чат: {chat_id},"
                                         f" параметры сообщения: {message.kwargs}.")
-                        except Exception as e:
+                        except Exception:
                             logger.error(f"Не получилось отправить сообщение, параметры:"
                                          f" {message.kwargs}. Ошибка: {get_exception()}")
                             message_list[1] = datetime.now() + timedelta(seconds=15)
@@ -117,11 +117,11 @@ def update_chat_id(ch_type, chat_id, ch_login, ch_title, otp):
                 cur.execute(sql)
                 rows = cur.fetchall()
                 connection.commit()
-                logger.info('Update Group ChatID rows: %s' % (rows))
+                logger.info('Update Group ChatID rows: %s' % rows)
                 if len(rows) > 0 and len(rows[0]) > 0 and rows[0][0] > 0:
                     res = 1
                 logger.info(f"Result: {[row for row in rows]}")
-        except Exception as e:
+        except Exception:
             logger.error("Ошибка подключения к вертике: " + get_exception())
 
     if ch_type == 'private':
@@ -133,11 +133,11 @@ def update_chat_id(ch_type, chat_id, ch_login, ch_title, otp):
                 cur.execute(sql)
                 rows = cur.fetchall()
                 connection.commit()
-                logger.info('Update Group ChatID rows: %s' % (rows))
+                logger.info('Update Group ChatID rows: %s' % rows)
                 if len(rows) > 0 and len(rows[0]) > 0 and rows[0][0] > 0:
                     res = 1
                 logger.info(f"Result: {[row for row in rows]}")
-        except Exception as e:
+        except Exception:
             logger.error("Ошибка подключения к вертике: " + get_exception())
 
     return res
@@ -159,7 +159,7 @@ def get_meas_id(message_text):
             cur = connection.cursor()
             cur.execute(select)
             meas_id = cur.fetchone()[0]
-    except Exception as e:
+    except Exception:
         logger.error("Ошибка подключения к вертике: " + get_exception())
         return False
     return meas_id
@@ -201,7 +201,7 @@ def send_tlg_msg(ch, method, properties, body):
         if 'to' in m and 'text' in m:
             t = '%s\t%s' % (sev_s, m['text'])
             BotMessage("send_message", chat_id=m['to'], text=t, parse_mode='HTML', disable_web_page_preview=True)
-    except Exception as ex:
+    except Exception:
         logger.error('Message not sent: ' + get_exception())
 
 
@@ -236,7 +236,7 @@ def get_event_state(event_id):
             answer = cur.fetchone()[0]
             state = STATE_NAME.get(answer, answer)
             logger.info(f"Полученное состояние: {state}")
-    except Exception as e:
+    except Exception:
         logger.error("Ошибка подключения к вертике: " + get_exception())
         return
     return state
@@ -263,7 +263,7 @@ def get_event_history_state(event_id):
                 logger.error(f"Событие {event_id} в базе не найдено.")
                 history_state = f"Событие {event_id} в базе не найдено."
 
-    except Exception as e:
+    except Exception:
         logger.error("Ошибка подключения к вертике: " + get_exception())
         return
     return history_state
@@ -274,7 +274,7 @@ def run_bot():
         try:
             logger.info("Запускаем бота.")
             bot.polling()
-        except Exception as e:
+        except Exception:
             logger.error("Ошибка процесса polling: " + get_exception())
             time.sleep(15)
 
@@ -293,7 +293,7 @@ def check_dashboard_events():
     while True:
         try:
             channel.start_consuming()
-        except Exception as e:
+        except Exception:
             logger.error("Ошибка процесса rabbit: " + get_exception())
             time.sleep(15)
 
@@ -324,7 +324,7 @@ def get_custom_graphic_image(message, hours):
             logger.info(f"URL: {GET_IMAGE_HOST}/custom_graphic/{hours}/{meas_id}")
             r = requests.get(f"{GET_IMAGE_HOST}/custom_graphic/{hours}/{meas_id}", timeout=(10, 60), verify=False)
             logger.info(f"Статус запроса графика: {r.status_code}")
-        except Exception as e:
+        except Exception:
             logger.error("Ошибка получения графика: " + get_exception())
             return False
         soup = BeautifulSoup(r.text, 'html.parser')
@@ -532,7 +532,7 @@ def keyboard(message):
     if message.reply_to_message:
         try:
             send_keyboard(message.reply_to_message)
-        except Exception as e:
+        except Exception:
             logger.error("Ошибка отправления клавиатуры: " + get_exception())
     else:
         BotMessage("reply_to", message=message, text="Команда принимается только в ответ на сообщение с событием.")
@@ -547,7 +547,7 @@ def state(message):
     if message.reply_to_message:
         try:
             send_state(message.reply_to_message)
-        except Exception as e:
+        except Exception:
             logger.error("Ошибка отправления статуса события: " + get_exception())
     else:
         BotMessage("reply_to", message=message, text="Команда принимается только в ответ на сообщение с событием.")
@@ -629,19 +629,22 @@ def reg_channel_bot(message):
 def check_text_messages(message):
     if message.from_user.id != CHANNEL_ADMIN_ID:
         logger_other_messages.info(
-            f"{message.from_user.first_name} ({message.from_user.username}), текст: {[message.text]} json:{message.json}")
+            f"{message.from_user.first_name} ({message.from_user.username}), текст: {[message.text]} "
+            f"json:{message.json}")
     else:
         result = check_state_and_severity_event(message)
         if result:
             send_keyboard(message)
         logger_bot_messages.info(
-            f"{message.from_user.first_name} ({message.from_user.username}), текст: {[message.text]} json:{message.json}")
+            f"{message.from_user.first_name} ({message.from_user.username}), текст: {[message.text]} "
+            f"json:{message.json}")
 
 
 @bot.callback_query_handler(func=lambda call: call.data == '1')
 def callback_inline_graphic(message):
     bot.answer_callback_query(message.id, show_alert=True, text="Запрос принят")
-    log_line = f"{message.from_user.first_name} ({message.from_user.username}) нажал на кнопку 'График' для сообщения: {message.message.json}"
+    log_line = f"{message.from_user.first_name} ({message.from_user.username}) нажал на кнопку 'График' " \
+               f"для сообщения: {message.message.json}"
     logger_button_presses.info(log_line)
     keyboard_message = message.message
     send_graphic_keyboard(keyboard_message)
@@ -652,7 +655,8 @@ def callback_inline_graphic(message):
 @bot.callback_query_handler(func=lambda call: call.data == '2')
 def callback_inline_statuses(message):
     bot.answer_callback_query(message.id, show_alert=True, text="Запрос принят")
-    log_line = f"{message.from_user.first_name} ({message.from_user.username}) нажал на кнопку 'Статусы' для сообщения: {message.message.json}"
+    log_line = f"{message.from_user.first_name} ({message.from_user.username}) нажал на кнопку 'Статусы'" \
+               f" для сообщения: {message.message.json}"
     logger_button_presses.info(log_line)
     keyboard_message = message.message
     send_statuses(keyboard_message)
@@ -661,7 +665,8 @@ def callback_inline_statuses(message):
 @bot.callback_query_handler(func=lambda call: call.data == '3')
 def callback_inline_graphic3(message):
     bot.answer_callback_query(message.id, show_alert=True, text="Запрос принят. Ожидайте ~15с")
-    log_line = f"{message.from_user.first_name} ({message.from_user.username}) нажал на кнопку '3 часа' для сообщения: {message.message.json}"
+    log_line = f"{message.from_user.first_name} ({message.from_user.username}) нажал на кнопку '3 часа'" \
+               f" для сообщения: {message.message.json}"
     logger_button_presses.info(log_line)
     keyboard_message = message.message.reply_to_message
     send_custom_graphic(keyboard_message, 3, True)

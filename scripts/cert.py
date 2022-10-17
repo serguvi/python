@@ -43,7 +43,7 @@ class Date:
             self.month = 12
 
 
-def GetException():
+def get_exception():
     exc_type, exc_obj, tb = sys.exc_info()
     f = tb.tb_frame
     lineno = tb.tb_lineno
@@ -79,7 +79,7 @@ try:
     log.info(data)
     termCert = re.search(r'\"notAfter\": \"(.*) GMT\"', data)
 except Exception:
-    e = GetException()
+    e = get_exception()
     log.error(e)
 
 if 'termCert' in globals():

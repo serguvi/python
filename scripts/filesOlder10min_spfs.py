@@ -9,10 +9,10 @@ def get_exception():
     exc_type, exc_obj, tb = sys.exc_info()
     f = tb.tb_frame
     lineno = tb.tb_lineno
-    filename = f.f_code.co_filename
-    linecache.checkcache(filename)
-    line = linecache.getline(filename, lineno, f.f_globals)
-    return 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj)
+    file_name = f.f_code.co_filename
+    linecache.checkcache(file_name)
+    line = linecache.getline(file_name, lineno, f.f_globals)
+    return 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(file_name, lineno, line.strip(), exc_obj)
 
 
 errors = []
@@ -32,22 +32,23 @@ log.info("Starting...")
 log.info(sys.argv)
 
 log.info("Директория: \\\\dbcftw\\ibs\\trc\\spfs")
+list_name = None
 try:
-    listName = os.listdir("\\\\dbcftw\\ibs\\trc\\spfs")
-    log.info("Кол-во файлов:", len(listName))
-except Exception as ex:
+    list_name = os.listdir("\\\\dbcftw\\ibs\\trc\\spfs")
+    log.info("Кол-во файлов:", len(list_name))
+except Exception:
     e = get_exception()
     log.error(e)
     errors.append(e)
 
-if 'listName' in locals():
+if list_name is not None:
     count = 0
-    for filename in listName:
+    for filename in list_name:
         try:
             dictTime[filename] = os.path.getctime("\\\\dbcftw\\ibs\\trc\\spfs" + "\\" + filename)
             if dictTime[filename] < (time.time() - 600):
                 count += 1
-        except Exception as ex:
+        except Exception:
             e = get_exception()
             log.error(e)
             errors.append(e)

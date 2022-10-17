@@ -15,7 +15,7 @@ def get_token():
         'username': args.user_name,
         'password': args.password,
     }
-    r1 = requests.post(args.url + '/auth/realms/{}/protocol/openid-connect/token'.format(args.realm), 
+    r1 = requests.post(args.url + '/auth/realms/{}/protocol/openid-connect/token'.format(args.realm),
                        params, verify=False).content.decode('utf-8')
     data = json.loads(r1)
     if 'access_token' not in data:
@@ -28,7 +28,7 @@ def get_token():
 def check_auth():
     r1 = get_token()
     headers = CaseInsensitiveDict()
-    headers["Cookie"] = 'keycloak-token={}'.format(r1)   
+    headers["Cookie"] = 'keycloak-token={}'.format(r1)
     r2 = requests.get(args.app_url + '/api/auth/', verify=False, headers=headers).content.decode('utf-8')
     if "true" in r2:
         print('{"authenticated": true}')

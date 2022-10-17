@@ -1,13 +1,12 @@
-import sys
 import linecache
-import os
 import logging
-import traceback
-import time
+import os
 import re
+import sys
+import time
+import traceback
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from datetime import datetime
 
 
 def get_exception() -> str:
@@ -105,7 +104,7 @@ def png_remover(script_location: Path, script_name, logger):
 
 def logs_remover(script_location: Path, logger):
     """
-    Remove old .log.\d+ files from logs_path_path
+    Remove old .log.\\d+ files from logs_path_path
     """
     logs_path = script_location / 'logs'
     delete_logs_list = []
@@ -117,12 +116,12 @@ def logs_remover(script_location: Path, logger):
                 number = int(search.group(1))
                 if number > 10:
                     delete_logs_list.append(logs_path / file)
-    except Exception as e:
+    except Exception:
         logger.error(get_exception())
         return
     for file in delete_logs_list:
         try:
             os.unlink(file)
-        except Exception as e:
+        except Exception:
             logger.error(get_exception())
             return

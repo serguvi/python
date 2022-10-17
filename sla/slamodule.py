@@ -40,15 +40,17 @@ def get_logger(filename: str, logs_path: Path) -> logging.Logger:
     """
     logger = logging.getLogger(filename)
     logger.setLevel(logging.INFO)
-    file_handler = RotatingFileHandler(str(logs_path/f"{filename}.log"), maxBytes=40000000, backupCount=10, encoding="UTF-8")
-    formatter = logging.Formatter('%(asctime)s.%(msecs)03d %(levelname)s %(lineno)s %(msg)s', datefmt="%Y-%m-%dT%H:%M:%S")
+    file_handler = RotatingFileHandler(str(logs_path/f"{filename}.log"), maxBytes=40000000,
+                                       backupCount=10, encoding="UTF-8")
+    formatter = logging.Formatter('%(asctime)s.%(msecs)03d %(levelname)s %(lineno)s %(msg)s',
+                                  datefmt="%Y-%m-%dT%H:%M:%S")
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
     return logger
 
 
-def send_to_victoria(metric_name: str, metric_value: str, calculation: str = "past_days", test: bool = False) -> int:
+def send_to_victoria(metric_name: str, metric_value: float, calculation: str = "past_days", test: bool = False) -> int:
     """
     Отправляет метрику в викторию с помозщью curl'a
 
@@ -131,6 +133,7 @@ class Slo:
         :param json_object: JSON объект ответа от Виктории
         :param error_value: Критичное значение для показателя
         """
+        self.data = {}
         for attr, value in json_object.items():
             self.__dict__[attr] = value
         if len(self.data.get("result", [])) == 0:

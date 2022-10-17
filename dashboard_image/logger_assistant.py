@@ -1,13 +1,12 @@
-import sys
 import linecache
-import os
 import logging
-import traceback
-import time
+import os
 import re
+import sys
+import time
+import traceback
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from datetime import datetime
 
 
 def get_exception() -> str:
@@ -70,8 +69,9 @@ def get_logger(filename: str, log_path: Path):
     logger = logging.getLogger(filename)
 
     logger.setLevel(logging.INFO)
-    file_handler = RotatingFileHandler(str(log_path/f"{filename}.log"), maxBytes=4000000, backupCount=10)
-    formatter = logging.Formatter('%(asctime)s.%(msecs)03d %(name)s %(levelname)s [%(filename)s] %(lineno)s %(msg)s', datefmt="%Y-%m-%dT%H:%M:%S")
+    file_handler = RotatingFileHandler(str(log_path / f"{filename}.log"), maxBytes=4000000, backupCount=10)
+    formatter = logging.Formatter('%(asctime)s.%(msecs)03d %(name)s %(levelname)s [%(filename)s] %(lineno)s %(msg)s',
+                                  datefmt="%Y-%m-%dT%H:%M:%S")
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
@@ -85,12 +85,12 @@ def png_remover(script_location: Path, script_name, logger):
     png_path = script_location / 'png'
     png_list = []
     t = time.time()
-    max_age = 60*60*24
+    max_age = 60 * 60 * 24
     try:
         for fname in os.listdir(png_path):
             if (script_name.lower() in fname.lower()) and (".png" in fname.lower()):
                 fdate = os.stat(png_path / fname).st_mtime
-                if (t-fdate)>max_age:
+                if (t - fdate) > max_age:
                     png_list.append(png_path / fname)
     except Exception as e:
         logger.error(e)
@@ -104,7 +104,7 @@ def png_remover(script_location: Path, script_name, logger):
 
 def logs_remover(script_location: Path, logger):
     """
-    Remove old .log.\d+ files from logs_path_path
+    Remove old .log.\\d+ files from logs_path_path
     """
     logs_path = script_location / 'logs'
     delete_logs_list = []
@@ -115,15 +115,13 @@ def logs_remover(script_location: Path, logger):
             if search:
                 number = int(search.group(1))
                 if number > 10:
-                    delete_logs_list.append(logs_path/file)
-    except Exception as e:
+                    delete_logs_list.append(logs_path / file)
+    except Exception:
         logger.error(get_exception())
         return
     for file in delete_logs_list:
         try:
             os.unlink(file)
-        except Exception as e:
+        except Exception:
             logger.error(get_exception())
             return
-
-

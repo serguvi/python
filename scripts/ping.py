@@ -1,11 +1,11 @@
-import os
-import time
-import sys
-import linecache
-from tutils import customlogger
-from urllib.request import Request, urlopen, ssl, socket
-from urllib.error import URLError, HTTPError
 import json
+import linecache
+import os
+import sys
+import urllib
+import requests
+from urllib.request import ssl, socket
+from tutils import customlogger
 
 
 def get_exception():
@@ -14,8 +14,8 @@ def get_exception():
     lineno = tb.tb_lineno
     filename = f.f_code.co_filename
     linecache.checkcache(filename)
-    line = linecache.getline(filename, lineno, f.f_globals)
-    return 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj)
+    current_line = linecache.getline(filename, lineno, f.f_globals)
+    return 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, current_line.strip(), exc_obj)
 
 
 script_location = os.path.dirname(os.path.realpath(__file__)) + os.path.sep
@@ -54,12 +54,13 @@ except Exception:
     log.error(e)
 
 try:
-    r = request.get(url)
+    r = requests.get(url)
     log.info(r.peer_certificate.get_notAfter())
 except Exception:
     e = get_exception()
     log.error(e)
 
+preprocessed = []
 try:
     process = os.popen('ping ...')
     preprocessed = process.read().split('\n')

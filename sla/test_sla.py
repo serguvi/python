@@ -1,5 +1,8 @@
+import datetime
 import unittest
-from slamodule import *
+from pathlib import Path
+
+import slamodule
 
 
 class TestSlo(unittest.TestCase):
@@ -47,16 +50,16 @@ class TestSlo(unittest.TestCase):
                        [1665342086.212, '1'], [1665342766.801, '1'], [1665343312.806, '1'], [1665343958.565, '1'],
                        [1665344596.184, '1'], [1665345057.908, '1'], [1665345658.745, '1'], [1665346257.692, '1'],
                        [1665346858.404, '1'], [1665347458.664, '1'], [1665348058.423, '1'], [1665348657.919, '1']]}]}}
-        slo_object = Slo(test_json, "0")
+        slo_object = slamodule.Slo(test_json, "0")
         assert slo_object is not None
 
     def test_constructor1(self):
         test_json = {'status': 'success', 'data': {'resultType': 'matrix', 'result': []}}
         slo_object = None
         try:
-            slo_object = Slo(test_json, "0")
+            slo_object = slamodule.Slo(test_json, "0")
         except Exception as e:
-            pass
+            print(e)
         assert slo_object is None
 
     def test_downtime(self):
@@ -102,7 +105,7 @@ class TestSlo(unittest.TestCase):
                        [1665342086.212, '1'], [1665342766.801, '1'], [1665343312.806, '1'], [1665343958.565, '1'],
                        [1665344596.184, '1'], [1665345057.908, '1'], [1665345658.745, '1'], [1665346257.692, '1'],
                        [1665346858.404, '1'], [1665347458.664, '1'], [1665348058.423, '1'], [1665348657.919, '1']]}]}}
-        slo_object = Slo(test_json, "0")
+        slo_object = slamodule.Slo(test_json, "0")
         downtime = slo_object.get_downtime()
         assert downtime == 0
 
@@ -149,7 +152,7 @@ class TestSlo(unittest.TestCase):
                        [1665342086.212, '1'], [1665342766.801, '1'], [1665343312.806, '1'], [1665343958.565, '1'],
                        [1665344596.184, '1'], [1665345057.908, '1'], [1665345658.745, '1'], [1665346257.692, '1'],
                        [1665346858.404, '1'], [1665347458.664, '1'], [1665348058.423, '1'], [1665348657.919, '1']]}]}}
-        slo_object = Slo(test_json, "0")
+        slo_object = slamodule.Slo(test_json, "0")
         downtime = slo_object.get_downtime()
         assert int(downtime) == 39
 
@@ -196,7 +199,7 @@ class TestSlo(unittest.TestCase):
                        [1665342086.212, '1'], [1665342766.801, '1'], [1665343312.806, '1'], [1665343958.565, '1'],
                        [1665344596.184, '1'], [1665345057.908, '1'], [1665345658.745, '1'], [1665346257.692, '1'],
                        [1665346858.404, '1'], [1665347458.664, '1'], [1665348058.423, '1'], [1665348657.919, '1']]}]}}
-        slo_object = Slo(test_json, "0")
+        slo_object = slamodule.Slo(test_json, "0")
         slo = slo_object.get_slo()
         assert slo == 100
 
@@ -243,7 +246,7 @@ class TestSlo(unittest.TestCase):
                        [1665342086.212, '1'], [1665342766.801, '1'], [1665343312.806, '1'], [1665343958.565, '1'],
                        [1665344596.184, '1'], [1665345057.908, '1'], [1665345658.745, '1'], [1665346257.692, '1'],
                        [1665346858.404, '1'], [1665347458.664, '1'], [1665348058.423, '1'], [1665348657.919, '1']]}]}}
-        slo_object = Slo(test_json, "0")
+        slo_object = slamodule.Slo(test_json, "0")
         slo = slo_object.get_slo()
         assert slo == 98.695
 
@@ -293,9 +296,9 @@ class TestSla(unittest.TestCase):
                        [1665342086.212, '1'], [1665342766.801, '1'], [1665343312.806, '1'], [1665343958.565, '1'],
                        [1665344596.184, '1'], [1665345057.908, '1'], [1665345658.745, '1'], [1665346257.692, '1'],
                        [1665346858.404, '1'], [1665347458.664, '1'], [1665348058.423, '1'], [1665348657.919, '1']]}]}}
-        slo_object1 = Slo(test_json, "0")
-        slo_object2 = Slo(test_json, "0")
-        sla_object = Sla(slo_object1, slo_object2)
+        slo_object1 = slamodule.Slo(test_json, "0")
+        slo_object2 = slamodule.Slo(test_json, "0")
+        sla_object = slamodule.Sla(slo_object1, slo_object2)
         sla = sla_object.get_sla()
         assert sla == 100
 
@@ -342,9 +345,9 @@ class TestSla(unittest.TestCase):
                        [1665342086.212, '1'], [1665342766.801, '1'], [1665343312.806, '1'], [1665343958.565, '1'],
                        [1665344596.184, '1'], [1665345057.908, '1'], [1665345658.745, '1'], [1665346257.692, '1'],
                        [1665346858.404, '1'], [1665347458.664, '1'], [1665348058.423, '1'], [1665348657.919, '1']]}]}}
-        slo_object1 = Slo(test_json, "0")
-        slo_object2 = Slo(test_json, "0")
-        sla_object = Sla(slo_object1, slo_object2)
+        slo_object1 = slamodule.Slo(test_json, "0")
+        slo_object2 = slamodule.Slo(test_json, "0")
+        sla_object = slamodule.Sla(slo_object1, slo_object2)
         sla = sla_object.get_sla()
         assert sla == 98.695
 
@@ -433,9 +436,9 @@ class TestSla(unittest.TestCase):
                        [1665342086.212, '1'], [1665342766.801, '1'], [1665343312.806, '1'], [1665343958.565, '1'],
                        [1665344596.184, '1'], [1665345057.908, '1'], [1665345658.745, '1'], [1665346257.692, '1'],
                        [1665346858.404, '1'], [1665347458.664, '1'], [1665348058.423, '1'], [1665348657.919, '1']]}]}}
-        slo_object1 = Slo(test_json1, "0")
-        slo_object2 = Slo(test_json2, "0")
-        sla_object = Sla(slo_object1, slo_object2)
+        slo_object1 = slamodule.Slo(test_json1, "0")
+        slo_object2 = slamodule.Slo(test_json2, "0")
+        sla_object = slamodule.Sla(slo_object1, slo_object2)
         sla = sla_object.get_sla()
         assert sla == 98.0
 
@@ -443,7 +446,7 @@ class TestSla(unittest.TestCase):
 class TestPeriodicSla(unittest.TestCase):
 
     def test_sla1(self):
-        sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "quarter")
+        sla_object = slamodule.PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "quarter")
         sla_object.values = [[1664659805.189, '100'],
                              [1664746204.522, '100'], [1664832605.724, '100'], [1664919005.918, '100'],
                              [1665005404.591, '100'], [1665091804.309, '100'], [1665178204.686, '100'],
@@ -453,7 +456,7 @@ class TestPeriodicSla(unittest.TestCase):
         assert sla == 100.0
 
     def test_sla2(self):
-        sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "quarter")
+        sla_object = slamodule.PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "quarter")
         sla_object.values = [[1664659805.189, '87'], [1664670805.189, '87'], [1664680805.189, '87'],
                              [1664746204.522, '100'], [1664832605.724, '100'], [1664919005.918, '100'],
                              [1665005404.591, '100'], [1665091804.309, '100'], [1665178204.686, '100'],
@@ -465,7 +468,7 @@ class TestPeriodicSla(unittest.TestCase):
         assert sla == 100.0
 
     def test_sla3(self):
-        sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "month")
+        sla_object = slamodule.PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "month")
         sla_object.values = [[1664659805.189, '87'],
                              [1664746204.522, '100'], [1664832605.724, '100'], [1664919005.918, '100'],
                              [1665005404.591, '100'], [1665091804.309, '100'], [1665178204.686, '100'],
@@ -477,7 +480,7 @@ class TestPeriodicSla(unittest.TestCase):
         assert sla == 100.0
 
     def test_sla4(self):
-        sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "quarter")
+        sla_object = slamodule.PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "quarter")
         sla_object.values = [[1664659805.189, '86'],
                              [1664746204.522, '100'], [1664832605.724, '100'], [1664919005.918, '100'],
                              [1665005404.591, '100'], [1665091804.309, '100'], [1665178204.686, '100'],
@@ -491,7 +494,7 @@ class TestPeriodicSla(unittest.TestCase):
     def test(self):
         try:
             print("Рассчитываем месячный SLA")
-            month_sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "month")
+            month_sla_object = slamodule.PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "month")
             print(f"Полученный JSON Из Виктории для : {month_sla_object.json}")
             month_sla = month_sla_object.get_sla()
             print(f"SLA Отказоустойчивость OMi GW за текущий месяц: {month_sla}%. "
@@ -505,7 +508,7 @@ class TestPeriodicSla(unittest.TestCase):
 
         try:
             print("\nРассчитываем квартальный SLA")
-            quarter_sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "quarter")
+            quarter_sla_object = slamodule.PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "quarter")
             print(f"Полученный JSON Из Виктории для : {quarter_sla_object.json}")
             quarter_sla = quarter_sla_object.get_sla()
             print(f"SLA Отказоустойчивость OMi GW за текущий квартал: {quarter_sla}%. "
@@ -519,50 +522,52 @@ class TestPeriodicSla(unittest.TestCase):
 
     def test_calculate_period(self):
         logs_path = Path("logs")
-        log = get_logger("test", logs_path)
+        log = slamodule.get_logger("test", logs_path)
         log.info("\n========START========")
-        calculate_period_sla("SLA Работоспособность OMI", "SLA_OMI_performance", "month", log, True)
+        slamodule.calculate_period_sla("SLA Работоспособность OMI", "SLA_OMI_performance", "month", log, True)
         log.info("===================")
-        calculate_period_sla("SLA Работоспособность OMI", "SLA_OMI_performance", "quarter", log, True)
+        slamodule.calculate_period_sla("SLA Работоспособность OMI", "SLA_OMI_performance", "quarter", log, True)
         log.info("===================")
-        calculate_period_sla("SLA Отказоустойчивость OMi GW", "SLA_Fault_tolerance_OMi_GW", "month", log, True)
+        slamodule.calculate_period_sla("SLA Отказоустойчивость OMi GW", "SLA_Fault_tolerance_OMi_GW", "month", log,
+                                       True)
         log.info("===================")
-        calculate_period_sla("SLA Отказоустойчивость OMi GW", "SLA_Fault_tolerance_OMi_GW", "quarter", log, True)
+        slamodule.calculate_period_sla("SLA Отказоустойчивость OMi GW", "SLA_Fault_tolerance_OMi_GW", "quarter", log,
+                                       True)
         log.info("========END========\n")
 
     def test_calculate_period_slo(self):
         logs_path = Path("logs")
-        log = get_logger("test", logs_path)
+        log = slamodule.get_logger("test", logs_path)
         log.info("\n========START========")
-        calculate_period_sla("SLO Доступности консоли (через балансировочный URL)",
-                             "SLO_Availability_Omi_test_0600balance", "month", log, True)
+        slamodule.calculate_period_sla("SLO Доступности консоли (через балансировочный URL)",
+                                       "SLO_Availability_Omi_test_0600balance", "month", log, True)
         log.info("===================")
-        calculate_period_sla("SLO Доступности консоли (через балансировочный URL)",
-                             "SLO_Availability_Omi_test_0600balance", "quarter", log, True)
+        slamodule.calculate_period_sla("SLO Доступности консоли (через балансировочный URL)",
+                                       "SLO_Availability_Omi_test_0600balance", "quarter", log, True)
         log.info("===================")
-        calculate_period_sla("SLO Работоспособность обработки событий", "SLO_Event_monitoring_OMI_DB",
-                             "month", log, True)
+        slamodule.calculate_period_sla("SLO Работоспособность обработки событий", "SLO_Event_monitoring_OMI_DB",
+                                       "month", log, True)
         log.info("===================")
-        calculate_period_sla("SLO Работоспособность обработки событий", "SLO_Event_monitoring_OMI_DB",
-                             "quarter", log, True)
+        slamodule.calculate_period_sla("SLO Работоспособность обработки событий", "SLO_Event_monitoring_OMI_DB",
+                                       "quarter", log, True)
         log.info("===================")
         log.info("===================")
-        calculate_period_sla("SLO Доступность GW1",
-                             "SLO_Omi_test_GW1", "month", log, True)
+        slamodule.calculate_period_sla("SLO Доступность GW1",
+                                       "SLO_Omi_test_GW1", "month", log, True)
         log.info("===================")
-        calculate_period_sla("SLO Доступность GW1",
-                             "SLO_Omi_test_GW1", "quarter", log, True)
+        slamodule.calculate_period_sla("SLO Доступность GW1",
+                                       "SLO_Omi_test_GW1", "quarter", log, True)
         log.info("===================")
-        calculate_period_sla("SLO Доступность GW2", "SLO_Omi_test_GW2",
-                             "month", log, True)
+        slamodule.calculate_period_sla("SLO Доступность GW2", "SLO_Omi_test_GW2",
+                                       "month", log, True)
         log.info("===================")
-        calculate_period_sla("SLO Доступность GW2", "SLO_Omi_test_GW2",
-                             "quarter", log, True)
+        slamodule.calculate_period_sla("SLO Доступность GW2", "SLO_Omi_test_GW2",
+                                       "quarter", log, True)
         log.info("========END========\n")
 
     def test_downtime(self):
-        PeriodicSla.date_now = datetime.datetime(2022, 10, 14)
-        sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "quarter")
+        slamodule.PeriodicSla.date_now = datetime.datetime(2022, 10, 14)
+        sla_object = slamodule.PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "quarter")
         sla_object.values = [[1664659805.189, '86'],
                              [1664746204.522, '100'], [1664832605.724, '100'], [1664919005.918, '100'],
                              [1665005404.591, '100'], [1665091804.309, '100'], [1665178204.686, '100'],
@@ -578,8 +583,8 @@ class TestPeriodicSla(unittest.TestCase):
         assert sla == 98.92
 
     def test_downtime2(self):
-        PeriodicSla.date_now = datetime.datetime(2022, 10, 14)
-        sla_object = PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "month")
+        slamodule.PeriodicSla.date_now = datetime.datetime(2022, 10, 14)
+        sla_object = slamodule.PeriodicSla("SLA_OMI_performance{calculation=\"past_days\"}", "month")
         sla_object.values = [[1664659805.189, '87'],
                              [1664746204.522, '100'], [1664832605.724, '100'], [1664919005.918, '100'],
                              [1665005404.591, '100'], [1665091804.309, '100'], [1665178204.686, '100'],
@@ -587,8 +592,8 @@ class TestPeriodicSla(unittest.TestCase):
                              [1665523804.774, '100'], [1665610204.454, '100'], [1665696603.934, '100']]
         downtime_percentage = sla_object.get_downtime_percentage()
         sla = sla_object.get_sla()
-        downtime = sla_object.get_downtime()
-        allowable_downtime = sla_object.get_allowable_downtime()
+        # downtime = sla_object.get_downtime()
+        # allowable_downtime = sla_object.get_allowable_downtime()
         remaining_allowable_downtime = sla_object.get_remaining_allowable_downtime()
         remaining_allowable_downtime_percentage = sla_object.get_remaining_allowable_downtime_percentage()
         # print(downtime, allowable_downtime, remaining_allowable_downtime, remaining_allowable_downtime_percentage)

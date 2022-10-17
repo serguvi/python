@@ -1,7 +1,5 @@
-import os, sys, linecache, time
-import datetime, argparse
+import os, sys, linecache
 import vertica_python
-import cx_Oracle, json
 import redis
 from redis.sentinel import Sentinel
 from tutils import customlogger
@@ -44,7 +42,7 @@ def check_vertica_conn(vertica_conn):
     return res
 
 
-def connect_to_vertica(vertica_conn_info, current_conn=False):
+def connect_to_vertica(vertica_connection_info, current_conn=False):
     check_conn_res = False
     if current_conn: check_conn_res = check_vertica_conn(current_conn)
     if check_conn_res:
@@ -64,10 +62,10 @@ def connect_to_vertica(vertica_conn_info, current_conn=False):
             except Exception as e:
                 log.warn(e)
 
-    log.info("Connecting to vertica....", vertica_conn_info['host'])
+    log.info("Connecting to vertica....", vertica_connection_info['host'])
     vertica_conn = False
     try:
-        vertica_conn = vertica_python.connect(**vertica_conn_info)
+        vertica_conn = vertica_python.connect(**vertica_connection_info)
     except Exception:
         e = get_exception()
         log.error(e)

@@ -1,6 +1,5 @@
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
-import re
 import os
 import sys
 import linecache
@@ -31,7 +30,7 @@ log.info(sys.argv)
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-endpoint = f"https://.../_xpack/sql?format=csv"
+endpoint = "https://.../_xpack/sql?format=csv"
 
 headers = {'Accept': 'application/json', 'Content-type': 'application/json'}
 
@@ -52,7 +51,7 @@ query = ("""
 }
 
 """).encode('utf-8')
-
+r = None
 try:
     r = requests.get(endpoint, data=query, auth=('...', '...'), verify=False, headers=headers)
     log.info("Статус запроса: " + str(r.status_code))
@@ -61,7 +60,7 @@ except Exception:
     log.error(e)
     error += 1
 
-if "r" in globals():
+if r is not None:
     if r.status_code == 200:
         listRequests = r.text.split("\r\n")
         count = listRequests[1]
